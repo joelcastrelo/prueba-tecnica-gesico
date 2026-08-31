@@ -1,9 +1,5 @@
 # Gesico Technical Test - Expedientes API
 
-API REST para la gestión de expedientes de recuperación de deuda: CRUD sobre
-expedientes, conversión de divisas del importe adeudado y generación de un PDF
-resumen por expediente.
-
 > Los datos de este proyecto son ficticios y de demostración. No contiene
 > información personal ni expedientes reales.
 
