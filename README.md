@@ -57,12 +57,18 @@ está excluido en `.gitignore`.
 ```bash
 curl -X POST http://localhost:8000/api/expedientes/ \
   -H "Content-Type: application/json" \
-  -d '{"debtor_name": "Juan Pérez García", "tax_id": "12345678Z", "debt_amount": "1250.00", "currency": "EUR", "court": "Juzgado n.º 3 de A Coruña"}'
+  -d '{"debtor_name": "Juan Perez Garcia", "tax_id": "12345678Z", "debt_amount": "1250.00", "currency": "EUR", "court": "Juzgado n.3 de A Coruna"}'
 
 curl "http://localhost:8000/api/expedientes/1/convertir/?currency=USD"
 
 curl http://localhost:8000/api/expedientes/1/pdf/ --output expediente.pdf
 ```
+
+> Nota: se evitan tildes/eñes en los ejemplos de `curl` a propósito. En Windows
+> (tanto Git Bash como PowerShell), pasar caracteres acentuados directamente en
+> un `-d` puede romperse por la codificación por defecto de la consola. La API
+> sí acepta y devuelve UTF-8 correctamente (probado); es solo el ejemplo de
+> terminal el que se simplifica para que funcione igual en cualquier sistema.
 
 ## Integración externa
 
@@ -97,8 +103,10 @@ docker compose exec web coverage report
 
 Las pruebas cubren: CRUD completo, validación de importe no positivo, 404 en
 expediente inexistente, conversión de divisas con la llamada externa mockeada
-(éxito y timeout), y que el endpoint de PDF devuelve `application/pdf` con
-contenido válido (cabecera `%PDF`).
+(éxito, timeout, error del proveedor, respuesta malformada, moneda no
+soportada, parámetro ausente y conversión entre la misma moneda), y que el
+endpoint de PDF devuelve `application/pdf` con contenido válido (cabecera
+`%PDF`). 18 tests, 99% de cobertura.
 
 ## Manejo de errores
 
