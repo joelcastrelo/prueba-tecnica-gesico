@@ -1,0 +1,272 @@
+{
+  "info": {
+    "_postman_id": "6f2b9b0a-6b7a-4e5b-9a3d-4b6d1c9a2e10",
+    "name": "Gesico Tech Test - Expedientes API",
+    "description": "Coleccion de pruebas manuales para la API de expedientes: CRUD completo, conversion de divisas y generacion de PDF. Ejecutar 'Crear expediente' primero: guarda automaticamente el id creado en la variable {{expediente_id}} para el resto de peticiones.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "expediente_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Crear expediente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const jsonData = pm.response.json();",
+              "pm.collectionVariables.set(\"expediente_id\", jsonData.id);",
+              "",
+              "pm.test(\"La respuesta incluye una referencia EXP-...\", function () {",
+              "    pm.expect(jsonData.reference).to.match(/^EXP-/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"debtor_name\": \"Juan Perez Garcia\",\n  \"tax_id\": \"12345678Z\",\n  \"debt_amount\": \"1250.00\",\n  \"currency\": \"EUR\",\n  \"court\": \"Juzgado n.3 de A Coruna\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", ""]
+        }
+      }
+    },
+    {
+      "name": "2. Listar expedientes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", ""]
+        }
+      }
+    },
+    {
+      "name": "3. Detalle de expediente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/{{expediente_id}}/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", "{{expediente_id}}", ""]
+        }
+      }
+    },
+    {
+      "name": "4. Actualizar expediente (PATCH)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"El estado se actualizo\", function () {",
+              "    pm.expect(pm.response.json().status).to.eql(\"in_progress\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"in_progress\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/{{expediente_id}}/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", "{{expediente_id}}", ""]
+        }
+      }
+    },
+    {
+      "name": "5. Convertir divisa (EUR -> USD)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"El importe convertido es un string, no un numero\", function () {",
+              "    pm.expect(typeof pm.response.json().converted_amount).to.eql(\"string\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/{{expediente_id}}/convertir/?currency=USD",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", "{{expediente_id}}", "convertir", ""],
+          "query": [{ "key": "currency", "value": "USD" }]
+        }
+      }
+    },
+    {
+      "name": "6. Convertir divisa no soportada (debe dar 400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/{{expediente_id}}/convertir/?currency=JPY",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", "{{expediente_id}}", "convertir", ""],
+          "query": [{ "key": "currency", "value": "JPY" }]
+        }
+      }
+    },
+    {
+      "name": "7. Descargar PDF del expediente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Content-Type es application/pdf\", function () {",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.eql(\"application/pdf\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/{{expediente_id}}/pdf/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", "{{expediente_id}}", "pdf", ""]
+        }
+      }
+    },
+    {
+      "name": "8. Expediente inexistente (debe dar 404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/999999/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", "999999", ""]
+        }
+      }
+    },
+    {
+      "name": "9. Eliminar expediente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 204\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/expedientes/{{expediente_id}}/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "expedientes", "{{expediente_id}}", ""]
+        }
+      }
+    }
+  ]
+}

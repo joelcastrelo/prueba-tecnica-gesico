@@ -96,9 +96,36 @@ por lo que no es necesario instalar nada adicional en la máquina del evaluador.
 
 ## Pruebas
 
+### Automatizadas
+
 ```bash
 docker compose exec web coverage run manage.py test
 docker compose exec web coverage report
+```
+
+### Manuales con Postman
+
+En `postman/gesico-tech-test.postman_collection.json` hay una colección con
+las 9 peticiones que cubren el CRUD completo, la conversión de divisas (caso
+correcto y moneda no soportada), la descarga de PDF, un expediente inexistente
+y el borrado. Para usarla:
+
+1. Importar el fichero en Postman (`File > Import`).
+2. Con el proyecto levantado (`docker compose up --build`), ejecutar primero
+   la petición **"1. Crear expediente"**: guarda automáticamente el `id`
+   creado en la variable de colección `expediente_id`, que usan el resto de
+   peticiones.
+3. Ejecutar el resto en orden, o correr toda la colección de una vez con el
+   *Collection Runner*.
+
+Cada petición incluye tests (pestaña *Tests* de Postman) que comprueban el
+código de estado esperado y, en varios casos, algo del contenido de la
+respuesta (por ejemplo, que la conversión de divisa devuelve el importe como
+string). También se puede ejecutar desde terminal sin abrir Postman, con
+[Newman](https://www.npmjs.com/package/newman):
+
+```bash
+npx newman run postman/gesico-tech-test.postman_collection.json
 ```
 
 Las pruebas cubren: CRUD completo, validación de importe no positivo, 404 en
