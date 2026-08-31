@@ -128,6 +128,91 @@ string). También se puede ejecutar desde terminal sin abrir Postman, con
 npx newman run postman/gesico-tech-test.postman_collection.json
 ```
 
+### Evidencia: peticiones y respuestas reales
+
+Ejecución real contra el proyecto levantado con `docker compose up --build`,
+capturada directamente de la terminal (no son respuestas de ejemplo escritas
+a mano).
+
+**1. Crear expediente**
+
+`POST /api/expedientes/`
+
+```json
+// Body de la peticion
+{"debtor_name": "Juan Perez Garcia", "tax_id": "12345678Z", "debt_amount": "1250.00", "currency": "EUR", "court": "Juzgado n.3 de A Coruna"}
+```
+
+```json
+// HTTP 201
+{"id":4,"reference":"EXP-D2B1C195","debtor_name":"Juan Perez Garcia","tax_id":"12345678Z","debt_amount":"1250.00","currency":"EUR","status":"open","court":"Juzgado n.3 de A Coruna","opened_at":"2026-08-31","notes":""}
+```
+
+**2. Listar expedientes**
+
+`GET /api/expedientes/` → `HTTP 200`, lista paginada con `count`, `next`, `previous` y `results`.
+
+**3. Detalle de un expediente**
+
+`GET /api/expedientes/4/`
+
+```json
+// HTTP 200
+{"id":4,"reference":"EXP-D2B1C195","debtor_name":"Juan Perez Garcia","tax_id":"12345678Z","debt_amount":"1250.00","currency":"EUR","status":"open","court":"Juzgado n.3 de A Coruna","opened_at":"2026-08-31","notes":""}
+```
+
+**4. Actualizar (PATCH)**
+
+`PATCH /api/expedientes/4/` con `{"status": "in_progress"}`
+
+```json
+// HTTP 200
+{"id":4, ..., "status":"in_progress", ...}
+```
+
+**5. Convertir divisa (caso correcto)**
+
+`GET /api/expedientes/4/convertir/?currency=USD`
+
+```json
+// HTTP 200 - tasa real consultada a Frankfurter en el momento de la prueba
+{"reference":"EXP-D2B1C195","original_amount":"1250.00","original_currency":"EUR","converted_amount":"1453.38","converted_currency":"USD"}
+```
+
+**6. Convertir a moneda no soportada**
+
+`GET /api/expedientes/4/convertir/?currency=JPY`
+
+```json
+// HTTP 400
+{"detail":"Moneda no soportada: EUR/JPY"}
+```
+
+**7. Descargar PDF**
+
+`GET /api/expedientes/4/pdf/`
+
+```
+HTTP 200
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="expediente_EXP-D2B1C195.pdf"
+```
+
+Fichero PDF válido descargado (verificado con `file`: `PDF document, version 1.7`).
+
+**8. Expediente inexistente**
+
+`GET /api/expedientes/999999/`
+
+```json
+// HTTP 404
+{"detail":"No Expediente matches the given query."}
+```
+
+**9. Eliminar expediente**
+
+`DELETE /api/expedientes/4/` → `HTTP 204`, sin contenido.
+
 Las pruebas cubren: CRUD completo, validación de importe no positivo, 404 en
 expediente inexistente, conversión de divisas con la llamada externa mockeada
 (éxito, timeout, error del proveedor, respuesta malformada, tasa no numérica,
