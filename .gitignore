@@ -7,3 +7,7 @@ venv/
 htmlcov/
 .pytest_cache/
 *.sqlite3
+*.pdf
+.idea/
+.vscode/
+.DS_Store

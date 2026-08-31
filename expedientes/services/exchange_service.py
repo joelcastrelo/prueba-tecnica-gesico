@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import requests
 
@@ -30,7 +30,7 @@ class ExchangeProviderError(ExchangeServiceError):
 def get_rate(base_currency: str, quote_currency: str) -> Decimal:
     if base_currency not in SUPPORTED_CURRENCIES or quote_currency not in SUPPORTED_CURRENCIES:
         raise InvalidCurrencyError(
-            f"Unsupported currency pair: {base_currency}/{quote_currency}"
+            f"Moneda no soportada: {base_currency}/{quote_currency}"
         )
 
     url = f"{FRANKFURTER_BASE_URL}/rate/{base_currency}/{quote_currency}"
@@ -40,19 +40,31 @@ def get_rate(base_currency: str, quote_currency: str) -> Decimal:
         response.raise_for_status()
     except requests.Timeout as exc:
         logger.error("Timeout consultando Frankfurter (%s/%s)", base_currency, quote_currency)
-        raise ExchangeTimeoutError("Exchange rate provider timed out") from exc
+        raise ExchangeTimeoutError(
+            "El servicio externo de tipos de cambio no respondió a tiempo."
+        ) from exc
     except requests.RequestException as exc:
         logger.error(
             "Error consultando Frankfurter (%s/%s): %s", base_currency, quote_currency, exc
         )
-        raise ExchangeProviderError("Exchange rate provider returned an error") from exc
+        raise ExchangeProviderError(
+            "No se ha podido consultar el servicio externo de tipos de cambio."
+        ) from exc
 
     try:
         data = response.json()
         rate = Decimal(str(data["rate"]))
-    except (KeyError, ValueError, TypeError) as exc:
+    except (KeyError, ValueError, TypeError, InvalidOperation) as exc:
         logger.error("Respuesta inválida de Frankfurter: %s", response.text[:200])
-        raise ExchangeProviderError("Exchange rate provider returned invalid data") from exc
+        raise ExchangeProviderError(
+            "El servicio externo devolvió datos no válidos."
+        ) from exc
+
+    if not rate.is_finite() or rate <= 0:
+        logger.error("Tasa de cambio no válida recibida de Frankfurter: %s", rate)
+        raise ExchangeProviderError(
+            "El servicio externo devolvió una tasa de cambio no válida."
+        )
 
     return rate
 
@@ -63,7 +75,5 @@ def convert_amount(amount: Decimal, base_currency: str, quote_currency: str) -> 
 
     rate = get_rate(base_currency, quote_currency)
     converted = (amount * rate).quantize(Decimal("0.01"))
-    logger.info(
-        "Conversión %s %s -> %s: %s", amount, base_currency, quote_currency, converted
-    )
+    logger.info("Conversión realizada: %s -> %s", base_currency, quote_currency)
     return converted

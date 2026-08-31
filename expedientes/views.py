@@ -13,6 +13,7 @@ from .services.exchange_service import (
     ExchangeTimeoutError,
     InvalidCurrencyError,
 )
+from .services.pdf_service import PDFGenerationError
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,13 @@ class ExpedienteViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def pdf(self, request, pk=None):
         expediente = self.get_object()
-        pdf_bytes = pdf_service.generate_expediente_pdf(expediente)
+
+        try:
+            pdf_bytes = pdf_service.generate_expediente_pdf(expediente)
+        except PDFGenerationError as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = (

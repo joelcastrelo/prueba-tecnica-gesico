@@ -103,10 +103,12 @@ docker compose exec web coverage report
 
 Las pruebas cubren: CRUD completo, validación de importe no positivo, 404 en
 expediente inexistente, conversión de divisas con la llamada externa mockeada
-(éxito, timeout, error del proveedor, respuesta malformada, moneda no
-soportada, parámetro ausente y conversión entre la misma moneda), y que el
-endpoint de PDF devuelve `application/pdf` con contenido válido (cabecera
-`%PDF`). 18 tests, 99% de cobertura.
+(éxito, timeout, error del proveedor, respuesta malformada, tasa no numérica,
+tasa no positiva, moneda no soportada, parámetro ausente y conversión entre la
+misma moneda), que el endpoint de PDF devuelve `application/pdf` con
+contenido válido (cabecera `%PDF`), y que un fallo de generación de PDF
+devuelve un error controlado en vez de un 500 sin más. 21 tests, 99% de
+cobertura.
 
 ## Manejo de errores
 
@@ -114,7 +116,12 @@ Las validaciones del modelo (importe positivo, moneda soportada) y los
 recursos inexistentes se apoyan en el comportamiento estándar de Django REST
 Framework (400 y 404 automáticos vía serializer y `get_object()`). El manejo
 explícito de errores se reserva para los puntos donde puede fallar algo
-externo o técnico: la llamada a Frankfurter y la generación del PDF.
+externo o técnico: la llamada a Frankfurter (timeout, error del proveedor,
+respuesta con datos no numéricos o una tasa inválida) y la generación del PDF
+con WeasyPrint, que se traduce a un 500 controlado (`PDFGenerationError`) en
+vez de propagar la excepción de la librería sin más. Todos los mensajes de
+error visibles en la API están en español, incluidos los que provienen de la
+integración externa.
 
 ## Seguridad
 

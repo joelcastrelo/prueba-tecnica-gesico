@@ -36,3 +36,19 @@ class ExchangeServiceTests(SimpleTestCase):
 
         with self.assertRaises(ExchangeProviderError):
             exchange_service.get_rate("EUR", "USD")
+
+    @patch("expedientes.services.exchange_service.requests.get")
+    def test_get_rate_raises_on_non_numeric_rate(self, mock_get):
+        mock_get.return_value.json.return_value = {"rate": "ERROR"}
+        mock_get.return_value.raise_for_status.return_value = None
+
+        with self.assertRaises(ExchangeProviderError):
+            exchange_service.get_rate("EUR", "USD")
+
+    @patch("expedientes.services.exchange_service.requests.get")
+    def test_get_rate_raises_on_non_positive_rate(self, mock_get):
+        mock_get.return_value.json.return_value = {"rate": -1}
+        mock_get.return_value.raise_for_status.return_value = None
+
+        with self.assertRaises(ExchangeProviderError):
+            exchange_service.get_rate("EUR", "USD")
