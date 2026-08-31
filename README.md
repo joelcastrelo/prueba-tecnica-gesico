@@ -57,7 +57,7 @@ está excluido en `.gitignore`.
 ```bash
 curl -X POST http://localhost:8000/api/expedientes/ \
   -H "Content-Type: application/json" \
-  -d '{"debtor_name": "Juan Perez Garcia", "tax_id": "12345678Z", "debt_amount": "1250.00", "currency": "EUR", "court": "Juzgado n.3 de A Coruna"}'
+  -d '{"debtor_name": "Juan Perez Garcia", "tax_id": "TEST-TAX-001", "debt_amount": "1250.00", "currency": "EUR", "court": "Juzgado n.3 de A Coruna"}'
 
 curl "http://localhost:8000/api/expedientes/1/convertir/?currency=USD"
 
@@ -73,10 +73,10 @@ curl http://localhost:8000/api/expedientes/1/pdf/ --output expediente.pdf
 ## Integración externa
 
 La conversión de divisas usa la API pública de [Frankfurter](https://frankfurter.dev)
-(`api.frankfurter.dev/v2`), que no requiere API key ni autenticación. Frankfurter
-v2 solo expone un endpoint de tasa (`/v2/rate/{base}/{quote}`), no de conversión
-directa, así que el importe se multiplica por la tasa en `exchange_service.py`
-usando `Decimal` en todo el cálculo para evitar errores de redondeo con `float`.
+(`api.frankfurter.dev/v2`), que no requiere API key ni autenticación. Para este
+proyecto se consulta el endpoint `/v2/rate/{base}/{quote}`, y el importe se
+multiplica por la tasa obtenida en `exchange_service.py`, usando `Decimal` en
+todo el cálculo para evitar errores de redondeo con `float`.
 
 Errores de esta integración se traducen a respuestas HTTP controladas:
 
@@ -121,106 +121,15 @@ y el borrado. Para usarla:
 Cada petición incluye tests (pestaña *Tests* de Postman) que comprueban el
 código de estado esperado y, en varios casos, algo del contenido de la
 respuesta (por ejemplo, que la conversión de divisa devuelve el importe como
-string). También se puede ejecutar desde terminal sin abrir Postman, con
-[Newman](https://www.npmjs.com/package/newman):
+string). También puede ejecutarse desde terminal, sin abrir Postman, si se
+tiene [Newman](https://www.npmjs.com/package/newman) instalado:
+`npx newman run postman/gesico-tech-test.postman_collection.json`.
 
-```bash
-npx newman run postman/gesico-tech-test.postman_collection.json
-```
-
-### Evidencia: peticiones y respuestas reales
-
-Ejecución real contra el proyecto levantado con `docker compose up --build`,
-capturada directamente de la terminal (no son respuestas de ejemplo escritas
-a mano).
-
-**1. Crear expediente**
-
-`POST /api/expedientes/`
-
-```json
-// Body de la peticion
-{"debtor_name": "Juan Perez Garcia", "tax_id": "12345678Z", "debt_amount": "1250.00", "currency": "EUR", "court": "Juzgado n.3 de A Coruna"}
-```
-
-```json
-// HTTP 201
-{"id":4,"reference":"EXP-D2B1C195","debtor_name":"Juan Perez Garcia","tax_id":"12345678Z","debt_amount":"1250.00","currency":"EUR","status":"open","court":"Juzgado n.3 de A Coruna","opened_at":"2026-08-31","notes":""}
-```
-
-**2. Listar expedientes**
-
-`GET /api/expedientes/` → `HTTP 200`, lista paginada con `count`, `next`, `previous` y `results`.
-
-**3. Detalle de un expediente**
-
-`GET /api/expedientes/4/`
-
-```json
-// HTTP 200
-{"id":4,"reference":"EXP-D2B1C195","debtor_name":"Juan Perez Garcia","tax_id":"12345678Z","debt_amount":"1250.00","currency":"EUR","status":"open","court":"Juzgado n.3 de A Coruna","opened_at":"2026-08-31","notes":""}
-```
-
-**4. Actualizar (PATCH)**
-
-`PATCH /api/expedientes/4/` con `{"status": "in_progress"}`
-
-```json
-// HTTP 200
-{"id":4, ..., "status":"in_progress", ...}
-```
-
-**5. Convertir divisa (caso correcto)**
-
-`GET /api/expedientes/4/convertir/?currency=USD`
-
-```json
-// HTTP 200 - tasa real consultada a Frankfurter en el momento de la prueba
-{"reference":"EXP-D2B1C195","original_amount":"1250.00","original_currency":"EUR","converted_amount":"1453.38","converted_currency":"USD"}
-```
-
-**6. Convertir a moneda no soportada**
-
-`GET /api/expedientes/4/convertir/?currency=JPY`
-
-```json
-// HTTP 400
-{"detail":"Moneda no soportada: EUR/JPY"}
-```
-
-**7. Descargar PDF**
-
-`GET /api/expedientes/4/pdf/`
-
-```
-HTTP 200
-Content-Type: application/pdf
-Content-Disposition: attachment; filename="expediente_EXP-D2B1C195.pdf"
-```
-
-Fichero PDF válido descargado (verificado con `file`: `PDF document, version 1.7`).
-
-**8. Expediente inexistente**
-
-`GET /api/expedientes/999999/`
-
-```json
-// HTTP 404
-{"detail":"No Expediente matches the given query."}
-```
-
-**9. Eliminar expediente**
-
-`DELETE /api/expedientes/4/` → `HTTP 204`, sin contenido.
-
-Las pruebas cubren: CRUD completo, validación de importe no positivo, 404 en
-expediente inexistente, conversión de divisas con la llamada externa mockeada
-(éxito, timeout, error del proveedor, respuesta malformada, tasa no numérica,
-tasa no positiva, moneda no soportada, parámetro ausente y conversión entre la
-misma moneda), que el endpoint de PDF devuelve `application/pdf` con
-contenido válido (cabecera `%PDF`), y que un fallo de generación de PDF
-devuelve un error controlado en vez de un 500 sin más. 21 tests, 99% de
-cobertura.
+Las pruebas automatizadas cubren el CRUD completo, validaciones y el 404 de
+un expediente inexistente, la integración con Frankfurter mockeada (éxito,
+timeout, error del proveedor, respuesta malformada o con una tasa inválida),
+la conversión entre la misma moneda, la generación de PDF y su manejo de
+errores. 21 tests, 99% de cobertura (`coverage report`).
 
 ## Manejo de errores
 
@@ -250,8 +159,9 @@ integración externa.
   entidad; DRF permite implementar serialización, validación, routing y
   respuestas HTTP sobre el modelo sin construir esa infraestructura a mano.
 - **PostgreSQL + Docker Compose** en vez de SQLite: la oferta valora
-  específicamente la experiencia con PostgreSQL, y con Docker el arranque
-  sigue siendo un único comando (`docker compose up --build`).
+  específicamente la experiencia con PostgreSQL. Una vez configurado `.env`,
+  la aplicación completa se levanta con un único comando
+  (`docker compose up --build`).
 - **Referencia del expediente por UUID corto** (`EXP-XXXXXXXX`) en vez de un
   contador secuencial: evita problemas de concurrencia o reutilización de
   referencias si se borran expedientes, sin añadir complejidad.
@@ -259,21 +169,19 @@ integración externa.
   ViewSet no conoce los detalles HTTP del proveedor de divisas ni de la
   generación del PDF, lo que permite mockear ambos en los tests sin tocar la
   vista.
-- **El endpoint `/convertir/` mantiene nombre en español** aunque el resto de
-  identificadores del código están en inglés, para que la URL siga siendo
-  reconocible dentro del dominio de negocio de la empresa.
-- **Sin validación de checksum de DNI/NIF**: solo se valida longitud máxima.
-  No es el objetivo de la prueba y añadiría complejidad fuera de alcance.
 - **`opened_at` como fecha automática de creación**, sin distinguir de un
   posible `created_at`/`updated_at`: para el alcance de esta prueba no se pidió
   esa distinción y se ha simplificado conscientemente.
-- **Sin Celery, Redis, autenticación ni funcionalidades de IA**: el enunciado
-  no las pide y añadirlas sería sobreingeniería para una prueba de 2 días,
-  aunque el puesto se llame "Desarrollo de IA".
+- **Alcance deliberadamente acotado**: no se han añadido Celery, Redis ni
+  funcionalidades de IA porque no son necesarias para cumplir los requisitos
+  de la prueba. La autenticación tampoco forma parte del enunciado; en un
+  sistema real sería imprescindible proteger estos endpoints.
 
 ## Limitaciones y posibles mejoras
 
 - No hay autenticación ni control de acceso sobre los endpoints.
+- El identificador fiscal (`tax_id`) se trata como texto y no se valida su
+  formato o checksum.
 - La lista de monedas soportadas está limitada a EUR/USD/GBP; Frankfurter
   soporta más divisas y podría ampliarse fácilmente.
 - No hay paginación configurable ni filtros de búsqueda sobre el listado de

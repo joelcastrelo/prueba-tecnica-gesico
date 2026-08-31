@@ -39,7 +39,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"debtor_name\": \"Juan Perez Garcia\",\n  \"tax_id\": \"12345678Z\",\n  \"debt_amount\": \"1250.00\",\n  \"currency\": \"EUR\",\n  \"court\": \"Juzgado n.3 de A Coruna\"\n}"
+          "raw": "{\n  \"debtor_name\": \"Juan Perez Garcia\",\n  \"tax_id\": \"TEST-TAX-001\",\n  \"debt_amount\": \"1250.00\",\n  \"currency\": \"EUR\",\n  \"court\": \"Juzgado n.3 de A Coruna\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/expedientes/",
