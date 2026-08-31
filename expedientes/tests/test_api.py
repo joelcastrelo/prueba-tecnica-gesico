@@ -105,7 +105,7 @@ class ExpedienteConvertTests(APITestCase):
         response = self.client.get(url, {"currency": "USD"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["converted_amount"], Decimal("108.00"))
+        self.assertEqual(response.data["converted_amount"], "108.00")
 
     @patch("expedientes.services.exchange_service.requests.get")
     def test_convert_amount_provider_timeout_returns_504(self, mock_get):
@@ -118,3 +118,42 @@ class ExpedienteConvertTests(APITestCase):
         response = self.client.get(url, {"currency": "USD"})
 
         self.assertEqual(response.status_code, status.HTTP_504_GATEWAY_TIMEOUT)
+
+    @patch("expedientes.services.exchange_service.requests.get")
+    def test_convert_amount_provider_error_returns_502(self, mock_get):
+        import requests
+
+        mock_get.side_effect = requests.ConnectionError
+        expediente = make_expediente(debt_amount=Decimal("100.00"), currency=Currency.EUR)
+
+        url = reverse("expediente-convertir", args=[expediente.pk])
+        response = self.client.get(url, {"currency": "USD"})
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+
+    def test_convert_missing_currency_param_returns_400(self):
+        expediente = make_expediente()
+
+        url = reverse("expediente-convertir", args=[expediente.pk])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_convert_unsupported_currency_returns_400(self):
+        expediente = make_expediente()
+
+        url = reverse("expediente-convertir", args=[expediente.pk])
+        response = self.client.get(url, {"currency": "JPY"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_convert_same_currency_skips_external_call(self):
+        expediente = make_expediente(debt_amount=Decimal("100.00"), currency=Currency.EUR)
+
+        url = reverse("expediente-convertir", args=[expediente.pk])
+        with patch("expedientes.services.exchange_service.requests.get") as mock_get:
+            response = self.client.get(url, {"currency": "EUR"})
+            mock_get.assert_not_called()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["converted_amount"], "100.00")

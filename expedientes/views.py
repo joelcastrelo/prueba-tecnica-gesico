@@ -50,9 +50,9 @@ class ExpedienteViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "reference": expediente.reference,
-                "original_amount": expediente.debt_amount,
+                "original_amount": str(expediente.debt_amount),
                 "original_currency": expediente.currency,
-                "converted_amount": converted_amount,
+                "converted_amount": str(converted_amount),
                 "converted_currency": target_currency,
             }
         )
