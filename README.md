@@ -154,10 +154,10 @@ integración externa.
 - **Django REST Framework**: el enunciado pide un endpoint CRUD sobre una
   entidad; DRF permite implementar serialización, validación, routing y
   respuestas HTTP sobre el modelo sin construir esa infraestructura a mano.
-- **PostgreSQL + Docker Compose** en vez de SQLite: la oferta valora
-  específicamente la experiencia con PostgreSQL. Una vez configurado `.env`,
-  la aplicación completa se levanta con un único comando
-  (`docker compose up --build`).
+- **PostgreSQL + Docker Compose** en vez de SQLite: es la tecnología con la
+  que tengo más experiencia, y además la oferta valora específicamente el
+  conocimiento de PostgreSQL. Una vez configurado `.env`, la aplicación
+  completa se levanta con un único comando (`docker compose up --build`).
 - **Referencia del expediente por UUID corto** (`EXP-XXXXXXXX`) en vez de un
   contador secuencial: evita problemas de concurrencia o reutilización de
   referencias si se borran expedientes, sin añadir complejidad.
